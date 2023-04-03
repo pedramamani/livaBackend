@@ -1,0 +1,2 @@
+newAccount
+licenseKey username firstName pin => newAccount
