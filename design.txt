@@ -1,2 +1,3 @@
-newAccount
-licenseKey username firstName pin => newAccount
+/account/new
+given user information, create a new account and send user to the tree page
+licenseKey username firstName pin theme => address key avatarShape avatarColor (username firstName theme)
