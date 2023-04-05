@@ -1,6 +1,6 @@
 import PocketBase from 'npm:pocketbase'
 import DeviceDetector from 'npm:device-detector-js'
-import { addresses, schemas, getFormFactor, keyExpiry, secret } from './config.ts'
+import { addresses, schemas, getFormFactor, keyExpiry, env } from './config.ts'
 import { Collection, Key } from './base.ts'
 import type { Account, Activity, Client, License, Location, Device, Data } from './base.ts'
 import { addMajorVersion, unixTime } from './utils.ts'
@@ -11,7 +11,7 @@ class Database {
 
     constructor () {
         this.client = new PocketBase(addresses.database)
-        this.client.admins.authWithPassword(secret.pocketBaseEmail, secret.pocketBasePassword)
+        this.client.admins.authWithPassword(env.pbEmail, env.pbPassword)
     }
 
     async newLocation(ip: string) {
@@ -21,7 +21,7 @@ class Database {
         }
 
         const url = new URL(addresses.ipinfo)
-        url.searchParams.set('token', secret.ipinfoToken)
+        url.searchParams.set('token', env.ipinfoToken)
         const response = await fetch(url)
         const data = await response.json()
 

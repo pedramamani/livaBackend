@@ -1,11 +1,11 @@
 import { serve } from 'https://deno.land/std@0.178.0/http/server.ts'
 import { database } from './database.ts'
 import { Key, Error, Endpoint } from './base.ts'
-import { hostname, port} from './config.ts'
+import { env, port} from './config.ts'
 import { json } from './utils.ts'
 
 
-await serve(handler, {hostname, port})
+await serve(handler, {hostname: env.lanAddress, port: port})
 
 function handler(request: Request) {
     if (request.method != 'POST') {

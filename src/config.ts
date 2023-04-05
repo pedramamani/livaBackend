@@ -3,15 +3,15 @@ import { RepeatSchema, BoundedSchema, EnumSchema, ComplexSchema } from './schema
 import { Key, Theme, AvatarColor, AvatarShape, FormFactor } from './base.ts'
 import { load } from "https://deno.land/std@0.182.0/dotenv/mod.ts";
 
-const env = await load();
+const environment = await load();
 
 export const keyExpiry = 65
-export const hostname = '10.0.0.199'
 export const port = 58136
-export const secret = {
-    pocketBaseEmail: env['pocketBaseEmail'],
-    pocketBasePassword: env['pocketBasePassword'],
-    ipinfoToken: env['ipinfoToken'],
+export const env = {
+    pbEmail: environment['pbEmail'],
+    pbPassword: environment['pbPassword'],
+    ipinfoToken: environment['ipinfoToken'],
+    lanAddress: environment['lanAddress'],
 } as const
 export const addresses = {
     database: 'http://127.0.0.1:8090',

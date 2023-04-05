@@ -103,7 +103,7 @@ export class BoundedSchema implements Schema {
 export class EnumSchema implements Schema {
     values: string[]
 
-    constructor (enum_: any) {
+    constructor (enum_: Record<string, string>) {
         this.values = Object.values(enum_)
     }
 
