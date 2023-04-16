@@ -1,9 +1,10 @@
 import PocketBase from 'npm:pocketbase'
 import DeviceDetector from 'npm:device-detector-js'
-import { addresses, schemas, getFormFactor, keyExpiry, env } from './config.ts'
-import { Collection, Key } from './base.ts'
-import type { Account, Activity, Client, License, Location, Device, Data } from './base.ts'
-import { addMajorVersion, unixTime } from './utils.ts'
+import { addresses, schemas, getFormFactor, keyExpiry, secrets } from './config.ts'
+import { Record, Collection, Key, Flat, Expanded, Full, AccountCard, Theme } from './base.ts'
+import type { Account, Activity, Client, License, Location, Device } from './base.ts'
+import { addMajorVersion, expandQuery, filterQuery, unixTime } from './utils.ts'
+import { unflatten } from './cancer.ts'
 
 
 class Database {
@@ -11,33 +12,32 @@ class Database {
 
     constructor () {
         this.client = new PocketBase(addresses.database)
-        this.client.admins.authWithPassword(env.pbEmail, env.pbPassword)
+        this.client.admins.authWithPassword(secrets.pbEmail, secrets.pbPassword)
     }
 
     async newLocation(ip: string) {
-        let location = await this.find<Location>(Collection.location, Key.ip, ip)
+        let location = await this.find<Location>('location', 'ip', ip)
         if (location) {
             return location
         }
 
         const url = new URL(addresses.ipinfo)
-        url.searchParams.set('token', env.ipinfoToken)
+        url.searchParams.set('token', secrets.ipinfoToken)
         const response = await fetch(url)
         const data = await response.json()
 
-        location = await this.create<Location>(Collection.location, {
-            [Key.ip]: ip,
-            [Key.city]: data['city'],
-            [Key.region]: data['region'],
-            [Key.countryCode]: data['country'],
-            [Key.timeZone]: data['timezone']
+        location = await this.create<Location>('location', {
+            ip: ip,
+            city: data['city'],
+            region: data['region'],
+            countryCode: data['country'],
+            timeZone: data['timezone'],
         })
         return location
     }
 
     async newClient(userAgent: string) {
-        let client = await this.find<Client>(Collection.client, Key.userAgent, userAgent)
-        console.log(userAgent)
+        let client = await this.find<Client>('client', 'userAgent', userAgent)
         if (client) {
             return client
         }
@@ -45,113 +45,123 @@ class Database {
         const detector = new DeviceDetector()
         const info = detector.parse(userAgent)
         if (info.os && info.client && info.device) {
-            client = await this.create<Client>(Collection.client, {
-                [Key.userAgent]: userAgent,
-                [Key.os]: addMajorVersion(info.os.name, info.os.version),
-                [Key.browser]: info.client.name,
-                [Key.formFactor]: getFormFactor(info.device.type),
-                [Key.model]: info.device.model,
-                [Key.brand]: info.device.brand,
+            client = await this.create<Client>('client', {
+                userAgent: userAgent,
+                os: addMajorVersion(info.os.name, info.os.version),
+                browser: info.client.name,
+                formFactor: getFormFactor(info.device.type),
+                model: info.device.model,
+                brand: info.device.brand,
             })
             return client
         }
     }
 
-    async newDevice(location: Location, client: Client, theme: string) {
-        const device = await this.create<Device>(Collection.device, {
-            [Key.address]: schemas[Key.address]!.randomValue(),
-            [Key.key]: schemas[Key.key]!.randomValue(),
-            [Key.keyExpiry]: unixTime(keyExpiry),
-            [Key.location]: location.id,
-            [Key.client]: client.id,
-            [Key.theme]: theme,
+    async newDevice(location: Full<Location>, client: Full<Client>, account: Full<Account>) {
+        const device = await this.create<Device>('device', {
+            address: schemas.address.randomValue(),
+            token: schemas.token.randomValue(),
+            tokenExpiry: unixTime(keyExpiry),
+            location: location.id,
+            client: client.id,
+            cards: [account.card.id],
+            activeAccount: account.id
         })
+
+        type FlatDevice = Flat<Device>
         return device
     }
 
-    async startDevice(address: string) {
-        const device = await this.find<Device>(Collection.device, Key.address, address)
-        if (device) {
-            return this.update(Collection.device, device.id, {
-                [Key.key]: schemas[Key.key]!.randomValue(),
-                [Key.keyExpiry]: unixTime(keyExpiry),
-            }, `${Key.activeAccount},${Key.accounts}`)
-        }
-    }
-
-    async sustainDevice(address: string) {
-        const device = await this.find<Device>(Collection.device, Key.address, address)
-        if (device) {
-            return this.update(Collection.device, device.id, {
-                [Key.keyExpiry]: unixTime(keyExpiry),
-            })
-        }
-    }
-
-    async deviceIsValid(address: string, key: string) {
-        const device = await this.find<Device>(Collection.device, Key.address, address)
-        return device && device[Key.key] == key && device[Key.keyExpiry] > unixTime()
-    }
-
-    async licenseKeyIsValid(licenseKey: string) {
-        const license = await this.find<License>(Collection.license, Key.licenseKey, licenseKey)
-        return license && license[Key.isValid]
-    }
-
-    async invalidateLicenseKey(licenseKey: string) {
-        const license = await this.find<License>(Collection.license, Key.licenseKey, licenseKey)
-        if (license) {
-            this.update(Collection.license, license.id, { [Key.isValid]: false })
-        }
-    }
-
-    async usernameTaken(username: string) {
-        const account = await this.find<Account>(Collection.account, Key.username, username)
-        return Boolean(account)
-    }
-
-    async newAccount(device: Device, username: string, firstName: string, pin: string) {
-        const rootActivity = await this.create<Activity>(Collection.activity, {
-            [Key.name]: 'Activity',
+    async newAccountCard(username: string, firstName: string, theme: Theme) {
+        const card = await this.create<AccountCard>('accountCard', {
+            username: username,
+            firstName: firstName,
+            avatarShape: schemas.avatarShape.randomValue(),
+            avatarColor: schemas.avatarColor.randomValue(),
+            theme: theme,
         })
-        const account = await this.create<Account>(Collection.account, {
-            [Key.username]: username,
-            [Key.pin]: pin,
-            [Key.firstName]: firstName,
-            [Key.activeDevice]: device.id,
-            [Key.rootActivity]: rootActivity.id,
-            [Key.activities]: [rootActivity.id],
-            [Key.avatarColor]: schemas[Key.avatarColor]!.randomValue(),
-            [Key.avatarShape]: schemas[Key.avatarShape]!.randomValue(),
-            [Key.theme]: device[Key.theme],
-        }, `${Key.activeDevice},${Key.rootActivity},${Key.activities}`)
+        return card
+    }
 
-        const accountIds = device[Key.accounts] ?? []
-        accountIds.push(account.id)
-        this.update(Collection.device, device.id, {
-            [Key.activeAccount]: account.id,
-            [Key.accounts]: accountIds,
+    async newActivity(name = 'Activity') {
+        const activity = await this.create<Activity>('activity', {
+            name: name,
+            starred: false,
+            children: [],
+        })
+        return activity
+    }
+
+    async newAccount(pin: string, card: Full<AccountCard>, license: Full<License>) {
+        const tree = await this.newActivity()
+        const account = await this.create<Account>('account', {
+            card: card.id,
+            pin: pin,
+            license: license.id,
+            tree: tree.id,
+            recordings: [],
         })
         return account
     }
 
-    async find<T>(collection: Collection, key: Key, value: string, expansions = '') {
+    // async startDevice(address: string) {
+    //     const device = await this.find<Device>('device', 'address', address)
+    //     if (device) {
+    //         return this.update('device', device.id, {
+    //             token: schemas.token.randomValue(),
+    //             tokenExpiry: unixTime(keyExpiry),
+    //         }, ['cards', 'activeAccount'])
+    //     }
+    // }
+
+    // async sustainDevice(address: string) {
+    //     const device = await this.find<Device>('device', 'address', address)
+    //     if (device) {
+    //         return this.update('device', device.id, {
+    //             tokenExpiry: unixTime(keyExpiry),
+    //         })
+    //     }
+    // }
+
+    // async deviceIsValid(address: string, token: string) {
+    //     const device = await this.find<Device>('device', 'address', address)
+    //     return device && device.token == token && device.tokenExpiry > unixTime()
+    // }
+
+    async licenseKeyIsValid(key: string) {
+        const license = await this.find<License>('license', 'key', key)
+        return license && license.isValid
+    }
+
+    async invalidateLicenseKey(key: string) {
+        const license = await this.find<License>('license', 'key', key)
+        if (license) {
+            this.update('license', license.id, { isValid: false })
+        }
+    }
+
+    async usernameTaken(username: string) {
+        const account = await this.find<Account>('account', 'username', username)
+        return Boolean(account)
+    }
+
+    async find<R extends Record, E extends Expanded<R> = Expanded<R>>(name: Collection, key: Key, value: string, expand: Key[] = []) {
         try {
-            const record = await this.client.collection(collection).getFirstListItem<T>(`${key}='${value}'`, { expand: expansions })
-            return record
+            const raw = await this.client.collection(name).getFirstListItem<E>(filterQuery(key, value), expandQuery(expand))
+            return unflatten<R, E>(raw)
         } catch (_) {
             return
         }
     }
 
-    async create<T>(collection: Collection, data: Data, expansions = '') {
-        const record = await this.client.collection(collection).create<T>(data, { expand: expansions })
-        return record
+    async create<R extends Record, E extends Expanded<R> = Expanded<R>>(name: Collection, record: Flat<R>, expand: Key[] = []) {
+        const raw = await this.client.collection(name).create<E>(record, expandQuery(expand))
+        return unflatten<R, E>(raw)
     }
 
-    async update<T>(collection: Collection, id: string, data: Data, expansions = '') {
-        const record = await this.client.collection(collection).update<T>(id, data, { expand: expansions })
-        return record
+    async update<R extends Record, E extends Expanded<R> = Expanded<R>>(name: Collection, id: string, record: Partial<Flat<R>>, expand: Key[] = []) {
+        const raw = await this.client.collection(name).update<E>(id, record, expandQuery(expand))
+        return unflatten<R, E>(raw)
     }
 }
 

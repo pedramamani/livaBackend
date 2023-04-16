@@ -1,13 +1,12 @@
 import { randomInt } from 'node:crypto'
 import { prettyJoin } from './utils.ts'
-import type { Value } from './base.ts'
 
-export type CharSet = { regex: RegExp, chars: string, description: string }
+export type CharSet = { regex: RegExp; chars: string; description: string }
 
 export interface Schema {
-    isValid(value: Value): boolean
-    getError(value: Value): string | undefined
-    randomValue(): Value
+    isValid(value: string): boolean
+    getError(value: string): string | undefined
+    randomValue(): string
 }
 
 export class RepeatSchema implements Schema {
@@ -100,15 +99,15 @@ export class BoundedSchema implements Schema {
     }
 }
 
-export class EnumSchema implements Schema {
-    values: string[]
+export class EnumSchema<T extends string> implements Schema {
+    values: T[]
 
-    constructor (enum_: Record<string, string>) {
-        this.values = Object.values(enum_)
+    constructor (values: T[]) {
+        this.values = values
     }
 
     isValid(value: string) {
-        return this.values.includes(value)
+        return this.values.includes(value as T)
     }
 
     getError(value: string) {

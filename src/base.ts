@@ -1,173 +1,103 @@
-export type Value = string | number | boolean | null | Value[]
-export type Data = { [_ in Key]?: Value }
+export type Record = License | Client | Location | AccountCard | Activity | Recording | Account | Device
+export type Data = Partial<License & Client & Location & AccountCard & Activity & Recording & Account & Device & { error: Error }>
+export type Key = keyof Data
 
-export enum Endpoint {
-    init = '/init',
-    start = '/start',
-    sustain = '/sustain',
-    signUp = '/signUp',
-    signIn = '/signIn',
-    signOut = '/signOut',
-    logIn = '/logIn',
+export type Full<T extends Record> = {
+    [K in keyof T]
+    : T[K] extends Record ? Full<T[K]>
+    : T[K] extends Array<Record> ? Full<T[K][number]>[]
+    : T[K]
+} & Base
+export type Flat<R extends Record> = {
+    [K in keyof R]
+    : R[K] extends Record ? string
+    : R[K] extends (Record | undefined) ? string | undefined
+    : R[K] extends Array<Record> ? string[]
+    : R[K]
 }
+export type Expanded<T extends Record, K0 extends Key = never, K1 extends Key = never, K2 extends Key = never, K3 extends Key = never> = {
+    expand: {
+        [K in keyof T]
+        : K extends K0 ? T[K] extends Record ? Expanded<T[K], K1, K2, K3>
+        : T[K] extends Array<Record> ? Expanded<T[K][number], K1, K2, K3>[]
+        : never : never
+    }
+} & Flat<T> & Base
 
-export enum Theme {
-    light = 'light',
-    dark = 'dark',
-}
+export type Collection = 'license' | 'client' | 'location' | 'accountCard' | 'activity' | 'recording' | 'account' | 'device'
+export type FormFactor = 'desktop' | 'tablet' | 'mobile' | 'other'
+export type Error = 'invalidRequest' | 'invalidEndpoint'
+export type Theme = 'light' | 'dark'
+export type AvatarShape = 'sun' | 'butterfly' | 'clam' | 'duck' | 'peacock' | 'lily' | 'bow' | 'star' | 'clover'
+export type AvatarColor = 'rose' | 'tan' | 'lime' | 'aqua' | 'lavender'
 
-export enum AvatarShape {
-    sun = 'sun',
-    butterfly = 'butterfly',
-    clam = 'clam',
-    duck = 'duck',
-    peacock = 'peacock',
-    lily = 'lily',
-    bow = 'bow',
-    star = 'star',
-    clover = 'clover',
-}
-
-export enum AvatarColor {
-    rose = 'rose',
-    tan = 'tan',
-    lime = 'lime',
-    aqua = 'aqua',
-    lavender = 'lavender',
-}
-
-export enum FormFactor {
-    desktop = 'desktop',
-    tablet = 'tablet',
-    mobile = 'mobile',
-    other = 'other',
-}
-
-export enum Error {
-    invalidRequest = 'invalidRequest',
-    invalidEndpoint = 'invalidEndpoint',
-}
-
-export enum Collection {
-    account = 'account',
-    accountData = 'accountData',
-    activity = 'activity',
-    client = 'client',
-    device = 'device',
-    license = 'license',
-    location = 'location',
-    record = 'record',
-}
-
-export enum Key {
-    otp = 'otp',
-    licenseKey = 'licenseKey',
-    firstName = 'firstName',
-    username = 'username',
-    pin = 'pin',
-    email = 'email',
-    userAgent = 'userAgent',
-    theme = 'theme',
-    avatarShape = 'avatarShape',
-    avatarColor = 'avatarColor',
-    ip = 'ip',
-    city = 'city',
-    region = 'region',
-    countryCode = 'countryCode',
-    timeZone = 'timeZone',
-    latitude = 'latitude',
-    longitude = 'longitude',
-    os = 'os',
-    browser = 'browser',
-    model = 'model',
-    address = 'address',
-    client = 'client',
-    location = 'location',
-    error = 'error',
-    key = 'key',
-    keyExpiry = 'keyExpiry',
-    isValid = 'isValid',
-    activeDevice = 'activeDevice',
-    rootActivity = 'rootActivity',
-    accounts = 'accounts',
-    activeAccount = 'activeAccount',
-    activity = 'activity',
-    start = 'start',
-    end = 'end',
-    name = 'name',
-    parent = 'parent',
-    children = 'children',
-    starred = 'starred',
-    records = 'records',
-    activeRecord = 'activeRecord',
-    activities = 'activities',
-    formFactor = 'formFactor',
-    brand = 'brand',
-}
-
-export type Base<T = never> = {
+export type Base = {
     id: string
     created: string
     updated: string
     collectionId: string
     collectionName: Collection
-    expand?: T
 }
 
-export type Account<T = unknown> = {
-    [Key.username]: string
-    [Key.pin]: string
-    [Key.firstName]: string
-    [Key.avatarShape]: string
-    [Key.avatarColor]: string
-    [Key.theme]: string
-    [Key.activeDevice]?: string
-    [Key.activities]?: string[]
-    [Key.rootActivity]: string
-    [Key.records]?: string[]
-    [Key.activeRecord]?: string
-} & Base<T>
-
-export type Activity<T = unknown> = {
-    [Key.name]: string
-    [Key.parent]?: string
-    [Key.children]?: string[]
-    [Key.starred]?: boolean
-} & Base<T>
+export type License = {
+    key: string
+    isValid: boolean
+}
 
 export type Client = {
-    [Key.userAgent]: string
-    [Key.os]: string
-    [Key.browser]: string
-    [Key.model]: string
-} & Base
-
-export type Device<T = unknown> = {
-    [Key.address]: string
-    [Key.key]: string
-    [Key.keyExpiry]: number
-    [Key.theme]: string
-    [Key.location]: string
-    [Key.client]: string
-    [Key.activeAccount]?: string
-    [Key.accounts]?: string[]
-} & Base<T>
-
-export type License = {
-    [Key.licenseKey]: string
-    [Key.isValid]?: boolean
-} & Base
+    userAgent: string
+    os: string
+    browser: string
+    formFactor: FormFactor
+    model: string
+    brand: string
+}
 
 export type Location = {
-    [Key.ip]: string
-    [Key.city]: string
-    [Key.region]: string
-    [Key.countryCode]: string
-    [Key.timeZone]: string
-} & Base
+    ip: string
+    city: string
+    region: string
+    countryCode: string
+    timeZone: string
+}
 
-export type Record<T = unknown> = {
-    [Key.activity]: string
-    [Key.start]: number
-    [Key.end]: number
-} & Base<T>
+export type AccountCard = {
+    username: string
+    firstName: string
+    avatarShape: AvatarShape
+    avatarColor: AvatarColor
+    theme: Theme
+}
+
+export type Activity = {
+    name: string
+    children: Activity[]
+    starred: boolean
+}
+
+export type Recording = {
+    activity: Activity
+    start: number
+    end: number
+}
+
+export type Account = {
+    card: AccountCard
+    pin: string
+    otp?: string
+    otpExpiry?: number
+    license: License
+    tree: Activity
+    recordings: Recording[]
+    activeRecording?: Recording
+}
+
+export type Device = {
+    address: string
+    token: string
+    tokenExpiry: number
+    location: Location
+    client: Client
+    cards: AccountCard[]
+    activeAccount?: Account
+}

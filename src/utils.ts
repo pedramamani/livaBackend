@@ -1,8 +1,11 @@
 export function prettyJoin(values: string[], conjunction = 'and') {
     switch (values.length) {
-        case 0: return ''
-        case 1: return values[0]
-        case 2: return `${values[0]} ${conjunction} ${values[1]}`
+        case 0:
+            return ''
+        case 1:
+            return values[0]
+        case 2:
+            return `${values[0]} ${conjunction} ${values[1]}`
         default: {
             const allButLast = values.slice(0, -1).join(', ')
             return `${allButLast}, ${conjunction} ${values.at(-1)}`
@@ -26,14 +29,11 @@ export function addMajorVersion(name: string, version: string) {
     return name
 }
 
-export function formDataToObject(formData: FormData) {
-    const object: {[_: string]: FormDataEntryValue} = {}
-    for (const [key, value] of formData.entries()) {
-        object[key] = value
-    }
-    return object
+export function filterQuery(key: string, value: string) {
+    return `${key}='${value}'`
 }
 
-export function json(data: any) {
-    return new Response(JSON.stringify(data), {headers: {'Content-Type': 'application/json'}})
+export function expandQuery(keys: string[]) {
+    const value = keys.map((_, index) => keys.slice(0, index + 1).join('.')).join(',')
+    return {expand: value}
 }
