@@ -1,5 +1,5 @@
-export type Record = License | Client | Location | AccountCard | Activity | Recording | Account | Device
-export type Data = Partial<License & Client & Location & AccountCard & Activity & Recording & Account & Device & { error: Error }>
+export type Record = License | Profile | Activity | Recording | Account | Device | Auth
+export type Data = Partial<License & Profile & Activity & Recording & Account & Device & Auth & { error: Error }>
 export type Key = keyof Data
 
 export type Full<T extends Record> = {
@@ -10,9 +10,9 @@ export type Full<T extends Record> = {
 } & Base
 export type Flat<R extends Record> = {
     [K in keyof R]
-    : R[K] extends Record ? string
-    : R[K] extends (Record | undefined) ? string | undefined
-    : R[K] extends Array<Record> ? string[]
+    : R[K] extends Record ? Id
+    : R[K] extends (Record | undefined) ? Id | undefined
+    : R[K] extends Array<Record> ? Id[]
     : R[K]
 }
 export type Expanded<T extends Record, K0 extends Key = never, K1 extends Key = never, K2 extends Key = never, K3 extends Key = never> = {
@@ -24,44 +24,32 @@ export type Expanded<T extends Record, K0 extends Key = never, K1 extends Key = 
     }
 } & Flat<T> & Base
 
-export type Collection = 'license' | 'client' | 'location' | 'accountCard' | 'activity' | 'recording' | 'account' | 'device'
-export type FormFactor = 'desktop' | 'tablet' | 'mobile' | 'other'
-export type Error = 'invalidRequest' | 'invalidEndpoint'
-export type Theme = 'light' | 'dark'
-export type AvatarShape = 'sun' | 'butterfly' | 'clam' | 'duck' | 'peacock' | 'lily' | 'bow' | 'star' | 'clover'
-export type AvatarColor = 'rose' | 'tan' | 'lime' | 'aqua' | 'lavender'
+export const themes = ['light', 'dark'] as const
+export const avatarShapes = ['sun', 'butterfly', 'clam', 'duck', 'peacock', 'lily', 'bow', 'star', 'clover'] as const
+export const avatarColors = ['rose', 'tan', 'lime', 'aqua', 'lavender'] as const
+export type Id = string
+export type Theme = typeof themes[number]
+export type AvatarShape = typeof avatarShapes[number]
+export type AvatarColor = typeof avatarColors[number]
+export type Collection = 'license' | 'profile' | 'activity' | 'recording' | 'account' | 'device' | 'auth' | 'otp'
+export type Endpoint = '/account/first'
+export type Error = 'invalidIpOrUserAgent' | 'invalidEndpointOrMethod' | 'invalidRequest'
 
 export type Base = {
-    id: string
+    id: Id
     created: string
     updated: string
-    collectionId: string
+    collectionId: Id
     collectionName: Collection
 }
 
 export type License = {
-    key: string
-    isValid: boolean
+    licenseKey: string
+    consumed: boolean
+    released: boolean
 }
 
-export type Client = {
-    userAgent: string
-    os: string
-    browser: string
-    formFactor: FormFactor
-    model: string
-    brand: string
-}
-
-export type Location = {
-    ip: string
-    city: string
-    region: string
-    countryCode: string
-    timeZone: string
-}
-
-export type AccountCard = {
+export type Profile = {
     username: string
     firstName: string
     avatarShape: AvatarShape
@@ -69,10 +57,22 @@ export type AccountCard = {
     theme: Theme
 }
 
+export type Otp = {
+    otp: string
+    fails: number
+    expiry: number
+}
+
 export type Activity = {
     name: string
     children: Activity[]
     starred: boolean
+}
+
+export type Auth = {
+    pin: string
+    fails: number
+    lastFail: number
 }
 
 export type Recording = {
@@ -82,22 +82,19 @@ export type Recording = {
 }
 
 export type Account = {
-    card: AccountCard
-    pin: string
-    otp?: string
-    otpExpiry?: number
+    profile: Profile
+    auth: Auth
     license: License
     tree: Activity
     recordings: Recording[]
     activeRecording?: Recording
+    otp?: Otp
 }
 
 export type Device = {
     address: string
     token: string
     tokenExpiry: number
-    location: Location
-    client: Client
-    cards: AccountCard[]
+    profiles: Profile[]
     activeAccount?: Account
 }

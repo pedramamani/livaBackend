@@ -21,13 +21,7 @@ export function unixTime(offset = 0) {
     return Math.floor(Date.now() / 1000) + offset
 }
 
-export function addMajorVersion(name: string, version: string) {
-    const majorVersion = version.split('.')[0]
-    if (majorVersion) {
-        return `${name} ${majorVersion}`
-    }
-    return name
-}
+
 
 export function filterQuery(key: string, value: string) {
     return `${key}='${value}'`
