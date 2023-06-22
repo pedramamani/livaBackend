@@ -1,0 +1,3 @@
+primitive := string | integer | boolean
+record := {string: primitive | id, "expand"?: {id: record | expandedRecord}}
+inflatedRecord := {string: primitive | record}
