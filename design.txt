@@ -1,7 +1,0 @@
-/account/first: username firstName theme pin licenseKey -> device
-
-Base: {id created updated collectionId collectionName}
-Record: License | Activity | Account | AccountCard | ...
-Flat<Record>: A Record where relation fields are replaced with their ids
-Full<Record>: Record & Base
-Expanded<Record>: Full<Record> & 

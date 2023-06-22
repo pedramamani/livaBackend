@@ -18,5 +18,8 @@
         "https://x.nest.land": true,
         "https://crux.land": true
     },
-    "dart.analyzerPath": null
+    "dart.analyzerPath": null,
+    "editor.inlayHints.enabled": "off",
+    "javascript.preferences.quoteStyle": "single",
+    "typescript.preferences.quoteStyle": "single"
 }
