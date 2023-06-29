@@ -10,6 +10,29 @@ class Database {
         this.client.admins.authWithPassword(secrets.pbEmail, secrets.pbPassword)
     }
 
+    
+    async newLocation(ip) {
+        let location = await this.find('location', 'ip', ip)
+        if (location) {
+            return location
+        }
+
+        const url = new URL('https://ipinfo.io')
+        url.searchParams.set('token', 'IPINFO_TOKEN')
+        const response = await fetch(url)
+        const data = await response.json()
+
+        location = await this.create<Location>('location', {
+            ip: ip,
+            city: data['city'],
+            region: data['region'],
+            countryCode: data['country'],
+            timeZone: data['timezone'],
+        })
+        return location
+    }
+
+
     async newAccount(data) {
         const profile = await this.create('profile', {
             username: data.username,
