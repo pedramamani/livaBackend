@@ -25,6 +25,14 @@ export function expandQuery(keys) {
     return {expand: keys.join(',')}
 }
 
+export function jsonResponse(data) {
+    return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } })
+}
+
+export function errorResponse(error, errorsByKey = {}) {
+    return jsonResponse({error: error, ...errorsByKey })
+}
+
 export function inflate(deflatedRecord) {
     if (!deflatedRecord.expand) {
         return deflatedRecord
@@ -49,12 +57,4 @@ export function deflate(inflatedRecord) {
         }
     }
     return record
-}
-
-export function jsonResponse(data) {
-    return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } })
-}
-
-export function errorResponse(error, errorsByKey = {}) {
-    return jsonResponse({error: error, ...errorsByKey })
 }
